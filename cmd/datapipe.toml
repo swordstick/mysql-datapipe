@@ -1,0 +1,42 @@
+# This is a TOML document. Boom.
+
+
+addr = "127.0.0.1:3306"
+user = "root"
+password = "wandongbokugou"
+server_id = 665
+flavor = "mysql"
+taddr = "127.0.0.1:3307"
+tuser = "root"
+tpassword = "wandongbokugou"
+dumpthreads = 20
+data_dir = "./master"
+[dump]
+mysqldump = "/usr/local/mysql/bin/mysqldump"
+tables = []
+table_db = "test"
+Ignore_tables = ["wp_posts1","wp_posts"]
+discard_err = false
+
+[Filters]
+[[Filter]]
+Table = "wp_postmeta_opt"
+Columns = ["meta_id","post_id","meta_key"]
+
+[[Filter]]
+Table = "wp_posts1"
+Columns = ["comment_status","post_password"]
+
+[[Filter]]
+Table = "wp_posts5"
+Columns = ["comment_status","post_password"]
+
+[Optimus]
+
+[[Optimu]]
+Source = "wp_postmeta_opt"
+Target = "wp_postmeta"
+
+[[Optimu]]
+Source = "wp_posts5_opt"
+Target = "wp_posts5"
