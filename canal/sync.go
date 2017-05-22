@@ -67,7 +67,7 @@ func (c *Canal) startSyncBinlog() error {
 				log.Errorf("handle rows event error %v", err)
 				return errors.Trace(err)
 			}
-			continue
+			// continue
 		case *replication.XIDEvent:
 			// try to save the position later
 		case *replication.QueryEvent:
