@@ -88,7 +88,7 @@ func (h *DbSyncHandler) insert(table *schema.Table, row []interface{}) error {
 	columns = columns[0 : len(columns)-1]
 	values = values[0 : len(values)-1]
 
-	sqlcmd := "REPLACE INTO `" + h.tableName(table.Name) + "` (" + columns + ") VALUES (" + values + ")"
+	sqlcmd := "REPLACE INTO `" + table.Schema + "`.`" + h.tableName(table.Name) + "` (" + columns + ") VALUES (" + values + ")"
 
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
@@ -116,7 +116,7 @@ func (h *DbSyncHandler) delete(table *schema.Table, row []interface{}) error {
 	}
 	condition = condition[0 : len(condition)-len(" AND ")]
 
-	sqlcmd := "DELETE FROM `" + h.tableName(table.Name) + "` WHERE " + condition
+	sqlcmd := "DELETE FROM `" + table.Schema + "`.`" + h.tableName(table.Name) + "` WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
 	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
@@ -159,7 +159,7 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 	}
 	setValues = setValues[0 : len(setValues)-1]
 
-	sqlcmd := "UPDATE `" + h.tableName(table.Name) + "` SET" + setValues + " WHERE " + condition
+	sqlcmd := "UPDATE `" + table.Schema + "`.`" + h.tableName(table.Name) + "` SET" + setValues + " WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
 	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
