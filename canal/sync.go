@@ -260,6 +260,39 @@ func (c *Canal) startSyncBinlog() error {
 func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, table string, action string) error {
 	ev := e.Event.(*replication.QueryEvent)
 
+	var tableExist bool
+	tableExist = true
+
+	for _, tb := range c.cfg.Dump.IgnoreTables {
+		if tb == table {
+			tableExist = false
+		}
+	}
+
+	if !tableExist {
+		log.Debugf("table name(%s.%s) not match ignore...",
+			schema, table)
+		return nil
+	}
+
+	tableExist = false
+
+	if len(c.cfg.Dump.Tables) == 0 {
+		tableExist = true
+	} else {
+		for _, tb := range c.cfg.Dump.Tables {
+			if tb == table {
+				tableExist = true
+			}
+		}
+	}
+
+	if schema != c.cfg.Dump.TableDB || !tableExist {
+		log.Debugf("table name(%s.%s) not match ignore...",
+			schema, table)
+		return nil
+	}
+
 	t, err := c.GetTable(schema, table)
 	if err != nil {
 		return errors.Trace(err)
@@ -275,6 +308,39 @@ func (c *Canal) handleRowsEvent(e *replication.BinlogEvent) error {
 	// Caveat: table may be altered at runtime.
 	schema := string(ev.Table.Schema)
 	table := string(ev.Table.Table)
+
+	var tableExist bool
+	tableExist = true
+
+	for _, tb := range c.cfg.Dump.IgnoreTables {
+		if tb == table {
+			tableExist = false
+		}
+	}
+
+	if !tableExist {
+		log.Debugf("table name(%s.%s) not match ignore...",
+			schema, table)
+		return nil
+	}
+
+	tableExist = false
+
+	if len(c.cfg.Dump.Tables) == 0 {
+		tableExist = true
+	} else {
+		for _, tb := range c.cfg.Dump.Tables {
+			if tb == table {
+				tableExist = true
+			}
+		}
+	}
+
+	if schema != c.cfg.Dump.TableDB || !tableExist {
+		log.Debugf("table name(%s.%s) not match ignore...",
+			schema, table)
+		return nil
+	}
 
 	t, err := c.GetTable(schema, table)
 	if err != nil {
