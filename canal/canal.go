@@ -1,7 +1,10 @@
 package canal
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -64,6 +67,11 @@ func NewCanal(cfg *Config) (*Canal, error) {
 	c.quit = make(chan struct{})
 
 	os.MkdirAll(cfg.DataDir, 0755)
+
+	// 指定log的级别和日志文件
+
+	log.SetLevelByString(cfg.LogLevel)
+	log.SetOutputByName(path.Join(cfg.LogDir, cfg.LogFile))
 
 	c.dumpDoneCh = make(chan struct{})
 	c.rsHandlers = make([]RowsEventHandler, 0, 4)
@@ -224,16 +232,20 @@ func (c *Canal) GetTable(db string, table string) (*schema.Table, error) {
 	c.tableLock.Unlock()
 
 	if ok {
+		log.Debug("GetTable exist the Talbe !! \n ")
 		return t, nil
 	}
 
+	log.Info("GetTable do not exist the Table !! \n")
 	t, err := schema.NewTable(c, db, table)
 	if err != nil {
+		log.Info("schema.NewTalbe Worng !\n")
 		return nil, errors.Trace(err)
 	}
 
 	c.tableLock.Lock()
 	c.tables[key] = t
+	c.SaveTableSchema()
 	c.tableLock.Unlock()
 
 	return t, nil
@@ -244,7 +256,90 @@ func (c *Canal) ClearTableCache(db []byte, table []byte) {
 	key := fmt.Sprintf("%s.%s", db, table)
 	c.tableLock.Lock()
 	delete(c.tables, key)
+	c.SaveTableSchema()
 	c.tableLock.Unlock()
+}
+
+// 保存表的结构体
+func (c *Canal) SaveTableSchema() error {
+	//打开或新建文件
+	file, err := os.Create(path.Join(c.cfg.DataDir, "TableSchema.frm.tmp"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	lf := json.NewEncoder(file)
+
+	//将内容逐一写入文件
+
+	for _, t := range c.tables {
+		if err := lf.Encode(t); err != nil {
+			log.Error(err.Error())
+			return err
+		}
+	}
+	os.Rename(path.Join(c.cfg.DataDir, "TableSchema.frm.tmp"), path.Join(c.cfg.DataDir, "TableSchema.frm"))
+
+	return nil
+}
+
+func (c *Canal) ParseTableSchema() error {
+
+	// 查看该结构文件是否存在，若不存在则返回
+	exists := IsFileExists(path.Join(c.cfg.DataDir, "TableSchema.frm"))
+	if !exists {
+		log.Warning("TableSchema.frm do not exists,If you are FirsetDump ,it maybe right. \n If not,Please check why it was delete. \n Maybe it will make mistake while parse binlog for Talbe haved Alter or Rename !!!")
+		return nil
+	}
+
+	log.Info("Start ParseTableSchema !!! \n")
+	// 打开文件
+	file, err := os.OpenFile(path.Join(c.cfg.DataDir, "TableSchema.frm"), os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer file.Close()
+
+	filerReader := bufio.NewReader(file)
+
+	for {
+		line, err := filerReader.ReadBytes('\n')
+		if err == io.EOF {
+			log.Infof("Tableschema length is %d", len(c.tables))
+			log.Info("Read TalbeSchema.frm Over! \n")
+			return nil
+		} else if err != nil {
+			log.Error("Read TableSchema.frm Error! \n")
+			return err
+		}
+
+		tablebyte := line[0 : len(line)-1]
+
+		table, err := parseJsonToTableSchema(tablebyte)
+		if err != nil {
+			log.Error("Parse TableSchema.frm Error! \n")
+			return err
+		}
+
+		key := fmt.Sprintf("%s.%s", table.Schema, table.Name)
+
+		c.tableLock.Lock()
+		c.tables[key] = table
+		c.tableLock.Unlock()
+
+		log.Debugf("c.tables length is %d", len(c.tables))
+	}
+}
+
+func parseJsonToTableSchema(body []byte) (*schema.Table, error) {
+	var table schema.Table
+	err := json.Unmarshal(body, &table)
+	if err != nil {
+		return nil, err
+	}
+	return &table, nil
 }
 
 // Check MySQL binlog row image, must be in FULL, MINIMAL, NOBLOB
@@ -336,4 +431,19 @@ func (c *Canal) Execute(cmd string, args ...interface{}) (rr *mysql.Result, err 
 
 func (c *Canal) SyncedPosition() mysql.Position {
 	return c.master.Pos()
+}
+
+func IsFileExists(name string) bool {
+	f, err := os.Stat(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+
+	if f.IsDir() {
+		return false
+	}
+
+	return true
 }

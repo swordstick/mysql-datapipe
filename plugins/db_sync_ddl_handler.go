@@ -46,8 +46,13 @@ func (h *DbSyncQueryHandler) Do(e *canal.QueryEvent) error {
 	var err error
 
 	if e.Action == canal.AlterAction {
-		log.Infof("Alter table %s", e.Table.Name)
-		err = h.alter(e.Query, e.Table)
+		err = h.ddl(e.Query, e.Table)
+	} else if e.Action == canal.CreateAction {
+		err = h.ddl(e.Query, e.Table)
+	} else if e.Action == canal.DropAction {
+		err = h.ddl(e.Query, e.Table)
+	} else if e.Action == canal.TruncAction {
+		err = h.ddl(e.Query, e.Table)
 	} else {
 		return nil
 	}
@@ -60,7 +65,7 @@ func (h *DbSyncQueryHandler) Do(e *canal.QueryEvent) error {
 	return nil
 }
 
-func (h *DbSyncQueryHandler) alter(Query []byte, table *schema.Table) error {
+func (h *DbSyncQueryHandler) ddl(Query []byte, table *schema.Table) error {
 
 	sqlcmd := string(Query)
 	if t, err := h.tableName(table.Schema, table.Name); err != nil {

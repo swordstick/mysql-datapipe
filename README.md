@@ -24,6 +24,7 @@ $ GO INSTALL src/cmd/datapipe.go
 * 持续获取变更推送到目标库
 * 变更表名
 * 筛选需要同步的字段
+* 支持各种DDL操作同步
 
 ## 用法
 
@@ -40,27 +41,30 @@ $ GO INSTALL src/cmd/datapipe.go
 ```
 # CONFIG FILE FOR DTAPIPE
 
-addr = "127.0.0.1:3306"							                    //源数据库地址
-user = "root"									                            //源数据库账号
-password = "davidwan"							                      //源数据库密码
-server_id = 665									                          //该进程伪装的从库SERVER_ID,注意不要和源库及其从库相同
-flavor = "mysql"								                          //mysql或者mariadb
-taddr = "127.0.0.1:3307"						                    //目标数据库地址
-tuser = "root"									                           //目标数据库账号
-tpassword = "davidwan"							                     //目标数据库密码
-dumpthreads = 20								                          //dump推送时并发数，暂时被代码内指定为20，此处为保留参数
-data_dir = "./master"							                      //master.info文件保存位置，记录当前同步的postion
+addr = "127.0.0.1:3306"	#源数据库地址
+user = "root"			   #源数据库账号
+password = "davidwan"	#源数据库密码
+server_id = 665		#该进程伪装的从库SERVER_ID,注意不要和源库及其从库相同
+flavor = "mysql"		#mysql或者mariadb
+taddr = "127.0.0.1:3307"	#目标数据库地址
+tuser = "root"			#目标数据库账号
+tpassword = "davidwan"	#目标数据库密码
+dumpthreads = 20			#dump推送时并发数，暂时被代码内指定为20，此处为保留参数
+data_dir = "./master"	#master.info文件保存位置，记录当前同步的postion
+log_level = "debug"
+log_dir = "./log"
+logfile = "databus_error.log"
 [dump]		
-mysqldump = "/usr/local/mysql/bin/mysqldump"	     //本机mysqldump地址
-tables = []										                             //希望同步的表名，不填表示table_db所有的表都默认同步
-table_db = "test"								                         //指定一个同步的库名
-Ignore_tables = ["wp_posts1","wp_posts"]		        //指定希望过滤的表名
-discard_err = false								                       //是否错误信息
+mysqldump = "/usr/local/mysql/bin/mysqldump"  #本机mysqldump地址
+tables = []			#希望同步的表名，不填表示table_db所有的表都默认同步
+table_db = "test"	#指定一个同步的库名
+Ignore_tables = ["wp_posts1","wp_posts"]  #指定希望过滤的表名
+discard_err = false			#是否错误信息
 
 [Filters]
 [[Filter]]
-Table = "wp_postmeta_opt"						                   //过滤的表名
-Columns = ["meta_id","post_id","meta_key"]		      //该表下希望被同步的字段
+Table = "wp_postmeta_opt"		#过滤的表名
+Columns = ["meta_id","post_id","meta_key"] #该表下希望被同步的字段
 
 [[Filter]]
 Table = "wp_posts1"
@@ -70,8 +74,8 @@ Columns = ["comment_status","post_password"]
 [Optimus]
 
 [[Optimu]]
-Source = "wp_postmeta_opt"						                  //源库中表名
-Target = "wp_postmeta"							                     //目标库中表名，转换表名
+Source = "wp_postmeta_opt"			#源库中表名
+Target = "wp_postmeta"		#目标库中表名，转换表名
 
 [[Optimu]]
 Source = "wp_posts5_opt"
@@ -102,8 +106,8 @@ Target = "wp_posts5"
 
 #### 同步的操作
 
-* 同步的操作包含DML , DDL中目前仅包含ALTER
-* CREATE 操作暂时不支持，为避免同步操作写入失败(目标端表不存在)，请手动在从库增加该表，异常自动修复,也可通过Ignore_tables参数过滤 
+* 同步的操作包含DML,DDL
+* 第一次初始化，不会生产建表语句，所以初始化时请自行建立表，运行之后，表的建立等操作会自动同步
 
 #### 工具的关闭和启动
 
@@ -128,8 +132,9 @@ Target = "wp_posts5"
 ## 版本变更计划
 
 * 加入HTTP监控接口，提供偏移时间值，当前配置读取，满足通用监控需求
-* 加入推送至REDIS功能，推送变形方式通过简单配置实现
-* 加入推送至KAFKA功能
+* 更丰富的数据总线请参考mysql-databus项目
+* 本项目定位为MYSQL间同步工具
+
 
 ## 作者
 

@@ -38,6 +38,9 @@ type Config struct {
 	Tuser       string     `toml:"tuser"`
 	Tpassword   string     `toml:"tpassword"`
 	dumpThreads uint32     `toml:"dumpthreads"`
+	LogFile     string     `toml:"logfile"`
+	LogLevel    string     `toml:"log_level"`
+	LogDir      string     `toml:"log_dir"`
 	Dump        DumpConfig `toml:"dump"`
 }
 

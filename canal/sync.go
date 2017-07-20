@@ -1,6 +1,7 @@
 package canal
 
 import (
+	"bytes"
 	"regexp"
 	"time"
 
@@ -14,7 +15,11 @@ import (
 )
 
 var (
-	expAlterTable = regexp.MustCompile("(?i)^ALTER\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+	expAlterTable       = regexp.MustCompile("(?i)^ALTER\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+	expCreateTable      = regexp.MustCompile("(?i)^CREATE\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+	expDropTable        = regexp.MustCompile("(?i)^DROP\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+	expTruncTable       = regexp.MustCompile("(?i)^TRUNCATE\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}$")
+	expAlterTableRename = regexp.MustCompile("(?i)^ALTER\\sTABLE\\s.*?\\sRENAME\\sTO\\s.*")
 )
 
 func (c *Canal) startSyncBinlog() error {
@@ -73,16 +78,46 @@ func (c *Canal) startSyncBinlog() error {
 		case *replication.QueryEvent:
 			// handle alert table query
 			if mb := expAlterTable.FindSubmatch(e.Query); mb != nil {
+				/*
+					if len(mb[1]) == 0 {
+						mb[1] = e.Schema
+					}
+					c.ClearTableCache(mb[1], mb[2])
+					// alter will be ignore for filtercols func running
+				*/
+
 				if len(mb[1]) == 0 {
 					mb[1] = e.Schema
+					// 待加入schema字符串
+					repb := []byte("`" + string(e.Schema) + "`.")
+					// 生产加入了schema字符串的内容
+					pp := expAlterTable.FindSubmatchIndex(e.Query)
+					var newslice [][]byte
+					if string(e.Query[pp[4]-1]) == "`" {
+						newslice = append(newslice, e.Query[0:pp[4]-1])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]-1:])
+					} else {
+						newslice = append(newslice, e.Query[0:pp[4]])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]:])
+					}
+					newquery := bytes.Join(newslice, []byte(""))
+					log.Debug(string(newquery))
+					// 更新e.Query
+					e.Query = newquery
 				}
-				c.ClearTableCache(mb[1], mb[2])
-				// alter will be ignore for filtercols func running
+
+				rename := expAlterTableRename.FindSubmatch(e.Query)
+				if rename == nil {
+					c.ClearTableCache(mb[1], mb[2])
+				}
 
 				if FilterTabs[string(mb[2])] {
 					log.Infof("table structure changed, but will be ignore for filtercols or optimus func of %s.%s\n", mb[1], mb[2])
 					c.master.Update(pos.Name, pos.Pos)
 					c.master.Save(forceSavePos)
+					c.ClearTableCache(mb[1], mb[2])
 					continue
 				}
 
@@ -90,15 +125,122 @@ func (c *Canal) startSyncBinlog() error {
 					log.Infof("table structure changed, but will be ignore for filtercols or optimus func of %s.%s\n", mb[1], mb[2])
 					c.master.Update(pos.Name, pos.Pos)
 					c.master.Save(forceSavePos)
+					c.ClearTableCache(mb[1], mb[2])
 					continue
 				}
 
-				if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2])); err != nil {
+				/*
+					if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2])); err != nil {
+						log.Errorf("handle Query event(%s:%d) error %v", pos.Name, pos.Pos, err)
+						return errors.Trace(err)
+					}
+				*/
+
+				if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2]), AlterAction); err != nil {
 					log.Errorf("handle Query event(%s:%d) error %v", pos.Name, pos.Pos, err)
 					return errors.Trace(err)
 				}
 
+				if rename != nil {
+					c.ClearTableCache(mb[1], mb[2])
+				}
+
 				log.Infof("table structure changed, clear table cache: %s.%s\n", mb[1], mb[2])
+				forceSavePos = true
+			} else if mb := expCreateTable.FindSubmatch(e.Query); mb != nil {
+				if len(mb[1]) == 0 {
+					mb[1] = e.Schema
+					// 待加入schema字符串
+					repb := []byte("`" + string(e.Schema) + "`.")
+					// 生产加入了schema字符串的内容
+					pp := expCreateTable.FindSubmatchIndex(e.Query)
+					var newslice [][]byte
+					if string(e.Query[pp[4]-1]) == "`" {
+						newslice = append(newslice, e.Query[0:pp[4]-1])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]-1:])
+					} else {
+						newslice = append(newslice, e.Query[0:pp[4]])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]:])
+					}
+					newquery := bytes.Join(newslice, []byte(""))
+					log.Debug(string(newquery))
+					// 更新e.Query
+					e.Query = newquery
+				}
+
+				if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2]), CreateAction); err != nil {
+					log.Errorf("handle Query event(%s:%d) error %v", pos.Name, pos.Pos, err)
+					return errors.Trace(err)
+				}
+
+				log.Infof("table Create: %s.%s\n", mb[1], mb[2])
+
+				forceSavePos = true
+			} else if mb := expDropTable.FindSubmatch(e.Query); mb != nil {
+				if len(mb[1]) == 0 {
+					mb[1] = e.Schema
+					// 待加入schema字符串
+					repb := []byte("`" + string(e.Schema) + "`.")
+					// 生产加入了schema字符串的内容
+					pp := expDropTable.FindSubmatchIndex(e.Query)
+					var newslice [][]byte
+					if string(e.Query[pp[4]-1]) == "`" {
+						newslice = append(newslice, e.Query[0:pp[4]-1])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]-1:])
+					} else {
+						newslice = append(newslice, e.Query[0:pp[4]])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]:])
+					}
+					newquery := bytes.Join(newslice, []byte(""))
+					log.Debug(string(newquery))
+					// 更新e.Query
+					e.Query = newquery
+				}
+
+				if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2]), DropAction); err != nil {
+					log.Errorf("handle Query event(%s:%d) For Drop table error %v", pos.Name, pos.Pos, err)
+					continue
+					//return errors.Trace(err)
+				}
+
+				c.ClearTableCache(mb[1], mb[2])
+				log.Infof("table Drop: %s.%s\n", mb[1], mb[2])
+
+				forceSavePos = true
+			} else if mb := expTruncTable.FindSubmatch(e.Query); mb != nil {
+				if len(mb[1]) == 0 {
+					mb[1] = e.Schema
+					// 待加入schema字符串
+					repb := []byte("`" + string(e.Schema) + "`.")
+					// 生产加入了schema字符串的内容
+					pp := expTruncTable.FindSubmatchIndex(e.Query)
+					var newslice [][]byte
+					if string(e.Query[pp[4]-1]) == "`" {
+						newslice = append(newslice, e.Query[0:pp[4]-1])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]-1:])
+					} else {
+						newslice = append(newslice, e.Query[0:pp[4]])
+						newslice = append(newslice, repb)
+						newslice = append(newslice, e.Query[pp[4]:])
+					}
+					newquery := bytes.Join(newslice, []byte(""))
+					log.Debug(string(newquery))
+					log.Debug(string(mb[2]))
+					// 更新e.Query
+					e.Query = newquery
+				}
+
+				if err = c.handleQueryEvent(ev, string(mb[1]), string(mb[2]), TruncAction); err != nil {
+					log.Errorf("handle Query event(%s:%d) table error %v", pos.Name, pos.Pos, err)
+					return errors.Trace(err)
+				}
+
+				log.Infof("table Truncate: %s.%s\n", mb[1], mb[2])
 				forceSavePos = true
 			} else {
 				// skip others
@@ -115,7 +257,7 @@ func (c *Canal) startSyncBinlog() error {
 	return nil
 }
 
-func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, table string) error {
+func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, table string, action string) error {
 	ev := e.Event.(*replication.QueryEvent)
 
 	t, err := c.GetTable(schema, table)
@@ -123,8 +265,6 @@ func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, tabl
 		return errors.Trace(err)
 	}
 
-	var action string
-	action = AlterAction
 	events := newQueryEvent(t, action, ev.Query)
 	return c.travelQueryEventHandler(events)
 }

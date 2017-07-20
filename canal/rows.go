@@ -12,6 +12,9 @@ const (
 	InsertAction = "insert"
 	DeleteAction = "delete"
 	AlterAction  = "alter"
+	CreateAction = "create"
+	DropAction   = "drop"
+	TruncAction  = "truncate"
 )
 
 type QueryEvent struct {

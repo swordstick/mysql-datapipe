@@ -9,6 +9,9 @@ flavor = "mysql"
 taddr = "127.0.0.1:3307"
 tuser = "root"
 tpassword = "wandongbokugou"
+log_level = "debug"
+log_dir = "./log"
+logfile = "databus_error.log"
 dumpthreads = 20
 data_dir = "./master"
 [dump]

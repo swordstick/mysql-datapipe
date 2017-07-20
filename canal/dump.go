@@ -141,6 +141,7 @@ func (c *Canal) tryDump() error {
 	if len(c.master.Name) > 0 && c.master.Position > 0 {
 		// we will sync with binlog name and position
 		log.Infof("skip dump, use last binlog replication pos (%s, %d)", c.master.Name, c.master.Position)
+		c.ParseTableSchema()
 		return nil
 	}
 
