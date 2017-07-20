@@ -3,6 +3,7 @@ package canal
 import (
 	"bytes"
 	"regexp"
+	"strings"
 	"time"
 
 	"context"
@@ -264,7 +265,7 @@ func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, tabl
 	tableExist = true
 
 	for _, tb := range c.cfg.Dump.IgnoreTables {
-		if tb == table {
+		if strings.EqualFold(tb, table) {
 			tableExist = false
 		}
 	}
@@ -281,13 +282,13 @@ func (c *Canal) handleQueryEvent(e *replication.BinlogEvent, schema string, tabl
 		tableExist = true
 	} else {
 		for _, tb := range c.cfg.Dump.Tables {
-			if tb == table {
+			if strings.EqualFold(tb, table) {
 				tableExist = true
 			}
 		}
 	}
 
-	if schema != c.cfg.Dump.TableDB || !tableExist {
+	if !strings.EqualFold(schema, c.cfg.Dump.TableDB) || !tableExist {
 		log.Debugf("table name(%s.%s) not match ignore...",
 			schema, table)
 		return nil
@@ -313,7 +314,7 @@ func (c *Canal) handleRowsEvent(e *replication.BinlogEvent) error {
 	tableExist = true
 
 	for _, tb := range c.cfg.Dump.IgnoreTables {
-		if tb == table {
+		if strings.EqualFold(tb, table) {
 			tableExist = false
 		}
 	}
@@ -330,13 +331,13 @@ func (c *Canal) handleRowsEvent(e *replication.BinlogEvent) error {
 		tableExist = true
 	} else {
 		for _, tb := range c.cfg.Dump.Tables {
-			if tb == table {
+			if strings.EqualFold(tb, table) {
 				tableExist = true
 			}
 		}
 	}
 
-	if schema != c.cfg.Dump.TableDB || !tableExist {
+	if !strings.EqualFold(schema, c.cfg.Dump.TableDB) || !tableExist {
 		log.Debugf("table name(%s.%s) not match ignore...",
 			schema, table)
 		return nil

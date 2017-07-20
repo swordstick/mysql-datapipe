@@ -2,6 +2,7 @@ package canal
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/juju/errors"
@@ -36,7 +37,7 @@ func (c *Canal) travelQueryEventHandler(e *QueryEvent) error {
 	tableExist = true
 
 	for _, tb := range c.cfg.Dump.IgnoreTables {
-		if tb == e.Table.Name {
+		if strings.EqualFold(tb, e.Table.Name) {
 			tableExist = false
 		}
 	}
@@ -53,13 +54,13 @@ func (c *Canal) travelQueryEventHandler(e *QueryEvent) error {
 		tableExist = true
 	} else {
 		for _, tb := range c.cfg.Dump.Tables {
-			if tb == e.Table.Name {
+			if strings.EqualFold(tb, e.Table.Name) {
 				tableExist = true
 			}
 		}
 	}
 
-	if e.Table.Schema != c.cfg.Dump.TableDB || !tableExist {
+	if !strings.EqualFold(e.Table.Schema, c.cfg.Dump.TableDB) || !tableExist {
 		log.Debugf("table name(%s.%s) not match ignore...",
 			e.Table.Schema, e.Table.Name)
 		return nil
@@ -100,7 +101,7 @@ func (c *Canal) travelRowsEventHandler(e *RowsEvent) error {
 	tableExist = true
 
 	for _, tb := range c.cfg.Dump.IgnoreTables {
-		if tb == e.Table.Name {
+		if strings.EqualFold(tb, e.Table.Name) {
 			tableExist = false
 		}
 	}
@@ -117,13 +118,13 @@ func (c *Canal) travelRowsEventHandler(e *RowsEvent) error {
 		tableExist = true
 	} else {
 		for _, tb := range c.cfg.Dump.Tables {
-			if tb == e.Table.Name {
+			if strings.EqualFold(tb, e.Table.Name) {
 				tableExist = true
 			}
 		}
 	}
 
-	if e.Table.Schema != c.cfg.Dump.TableDB || !tableExist {
+	if !strings.EqualFold(e.Table.Schema, c.cfg.Dump.TableDB) || !tableExist {
 		log.Debugf("table name(%s.%s) not match ignore...",
 			e.Table.Schema, e.Table.Name)
 		return nil
