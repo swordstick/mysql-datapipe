@@ -100,7 +100,7 @@ Target = "wp_posts5"
 #### 同步选择的范围
 
  
-* 只能选定一个库
+* 可以选择所有库，多个库，或者1个库，以及一个库中的若干表
 * 按照参数生效级别，Ignore_tables > tables(即指定同步或[]默认不指定的表参数) 
 
 
@@ -117,7 +117,10 @@ Target = "wp_posts5"
 
 * 放弃工具自动完成初始化表工作，只需要在master.info中填入获取的偏移信息即可
 
+#### telnet 
 
+* telnet登陆 monitorip && monitorclient，即可使用help查看到各类命令，包含在线修改loglevel
+* auth 认证 进行有效操作前，需要auth认证，密码为auth配置的字符串
 
 ## 性能
 

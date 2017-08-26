@@ -19,7 +19,8 @@ type DbSyncQueryHandler struct {
 
 func NewDbSyncQueryHandler(cfg *canal.Config) *DbSyncQueryHandler {
 	var tranferUri string
-	tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.Tuser, cfg.Tpassword, cfg.Taddr, cfg.Dump.TableDB)
+	// tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.Tuser, cfg.Tpassword, cfg.Taddr, cfg.Dump.TableDB)
+	tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/mysql", cfg.Tuser, cfg.Tpassword, cfg.Taddr)
 	db, _ := sql.Open("mysql", tranferUri+canal.MysqlTimeout)
 	err := db.Ping()
 	if err != nil {
@@ -69,7 +70,7 @@ func (h *DbSyncQueryHandler) ddl(Query []byte, table *schema.Table) error {
 
 	sqlcmd := string(Query)
 	if t, err := h.tableName(table.Schema, table.Name); err != nil {
-		sqlcmd = strings.Replace(sqlcmd, table.Schema+"."+table.Name, t, -1)
+		sqlcmd = strings.Replace(sqlcmd, "`"+table.Schema+"`.`"+table.Name+"`", t, -1)
 	}
 	_, err := h.dbase.Exec(sqlcmd)
 	log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
@@ -81,11 +82,12 @@ func (h *DbSyncQueryHandler) ddl(Query []byte, table *schema.Table) error {
 }
 
 func (h *DbSyncQueryHandler) tableName(srcSchema string, srcName string) (string, error) {
+	itbi := fmt.Sprintf("%s.%s", srcSchema, srcName)
 
-	t, ok := canal.Cfg_Tc[srcName]
+	t, ok := canal.Cfg_Tc[strings.ToUpper(itbi)]
 
 	if ok {
-		return fmt.Sprintf("%s.%s", srcSchema, t), errors.Errorf("DDL Table changed to %s ", t)
+		return fmt.Sprintf("%s", t), errors.Errorf("DDL Table changed to %s ", t)
 	} else {
 		return fmt.Sprintf("%s.%s", srcSchema, srcName), nil
 	}

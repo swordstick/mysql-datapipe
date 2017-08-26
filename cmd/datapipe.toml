@@ -14,6 +14,9 @@ log_dir = "./log"
 logfile = "databus_error.log"
 dumpthreads = 20
 data_dir = "./master"
+auth = "dba"
+monitorip = "127.0.0.1"
+monitorclient = "999"
 [dump]
 mysqldump = "/usr/local/mysql/bin/mysqldump"
 tables = []

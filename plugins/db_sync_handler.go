@@ -3,6 +3,7 @@ package plugins
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 
 	"canal"
@@ -21,7 +22,8 @@ const ThreadforConn = 20
 
 func NewDbSyncHandler(cfg *canal.Config) *DbSyncHandler {
 	var tranferUri string
-	tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.Tuser, cfg.Tpassword, cfg.Taddr, cfg.Dump.TableDB)
+	//tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.Tuser, cfg.Tpassword, cfg.Taddr, cfg.Dump.TableDB)
+	tranferUri = fmt.Sprintf("%s:%s@tcp(%s)/mysql", cfg.Tuser, cfg.Tpassword, cfg.Taddr)
 	db, _ := sql.Open("mysql", tranferUri+canal.MysqlTimeout)
 	err := db.Ping()
 	if err != nil {
@@ -69,8 +71,8 @@ func (h *DbSyncHandler) Do(e *canal.RowsEvent) error {
 func (h *DbSyncHandler) insert(table *schema.Table, row []interface{}) error {
 	var columns, values string
 	for k := 0; k < len(table.Columns); k++ {
-		if canal.FilterTabs[table.Name] {
-			if !canal.FilterCols[table.Name][table.Columns[k].Name] {
+		if canal.FilterTabs[fmt.Sprintf("%s.%s", table.Schema, table.Name)] {
+			if !canal.FilterCols[fmt.Sprintf("%s.%s", table.Schema, table.Name)][table.Columns[k].Name] {
 				continue
 			}
 		}
@@ -88,7 +90,7 @@ func (h *DbSyncHandler) insert(table *schema.Table, row []interface{}) error {
 	columns = columns[0 : len(columns)-1]
 	values = values[0 : len(values)-1]
 
-	sqlcmd := "REPLACE INTO `" + table.Schema + "`.`" + h.tableName(table.Name) + "` (" + columns + ") VALUES (" + values + ")"
+	sqlcmd := "REPLACE INTO `" + table.Schema + "`.`" + h.tableName(table.Schema, table.Name) + "` (" + columns + ") VALUES (" + values + ")"
 
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
@@ -116,7 +118,7 @@ func (h *DbSyncHandler) delete(table *schema.Table, row []interface{}) error {
 	}
 	condition = condition[0 : len(condition)-len(" AND ")]
 
-	sqlcmd := "DELETE FROM `" + table.Schema + "`.`" + h.tableName(table.Name) + "` WHERE " + condition
+	sqlcmd := "DELETE FROM `" + table.Schema + "`.`" + h.tableName(table.Schema, table.Name) + "` WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
 	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
@@ -146,8 +148,8 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 
 	for k := 0; k < len(table.Columns); k++ {
 
-		if canal.FilterTabs[table.Name] {
-			if !canal.FilterCols[table.Name][table.Columns[k].Name] {
+		if canal.FilterTabs[fmt.Sprintf("%s.%s", table.Schema, table.Name)] {
+			if !canal.FilterCols[fmt.Sprintf("%s.%s", table.Schema, table.Name)][table.Columns[k].Name] {
 				continue
 			}
 		}
@@ -159,7 +161,7 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 	}
 	setValues = setValues[0 : len(setValues)-1]
 
-	sqlcmd := "UPDATE `" + table.Schema + "`.`" + h.tableName(table.Name) + "` SET" + setValues + " WHERE " + condition
+	sqlcmd := "UPDATE `" + table.Schema + "`.`" + h.tableName(table.Schema, table.Name) + "` SET" + setValues + " WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
 	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
@@ -170,10 +172,13 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 	return nil
 }
 
-func (h *DbSyncHandler) tableName(srcName string) string {
-	t, ok := canal.Cfg_Tc[srcName]
+func (h *DbSyncHandler) tableName(srcSchema string, srcName string) string {
+
+	itbi := fmt.Sprintf("%s.%s", srcSchema, srcName)
+	t, ok := canal.Cfg_Tc[strings.ToUpper(itbi)]
 	if ok {
-		return t
+		param := strings.Split(t, ".")
+		return param[1]
 	} else {
 		return srcName
 	}

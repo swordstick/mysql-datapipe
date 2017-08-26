@@ -118,15 +118,25 @@ func (d *Dumper) Dump(w io.Writer) error {
 		}
 	}
 
-	if len(d.Tables) == 0 && len(d.TableDB) == 0 {
-		panic("TableDB && Tables all Empty!!! Please input unless TableDB !!!")
+	if len(d.Tables) == 0 && len(d.Databases) == 0 {
+		args = append(args, "--all-databases")
 	} else if len(d.Tables) == 0 {
 		args = append(args, "--databases")
-		args = append(args, d.TableDB)
+		args = append(args, d.Databases...)
 	} else {
 		args = append(args, d.TableDB)
 		args = append(args, d.Tables...)
 
+		/*
+			if len(d.Tables) == 0 && len(d.TableDB) == 0 {
+				panic("TableDB && Tables all Empty!!! Please input unless TableDB !!!")
+			} else if len(d.Tables) == 0 {
+				args = append(args, "--databases")
+				args = append(args, d.TableDB)
+			} else {
+				args = append(args, d.TableDB)
+				args = append(args, d.Tables...)
+		*/
 		// If we only dump some tables, the dump data will not have database name
 		// which makes us hard to parse, so here we add it manually.
 

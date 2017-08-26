@@ -2,6 +2,7 @@ package canal
 
 import (
 	"log"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -41,7 +42,7 @@ func ParseOptimus(filename string) error {
 
 	for _, s := range favorites.Optimu {
 		//fmt.Printf("%s (%s)\n", s.Source, s.Target)
-		Cfg_Tc[s.Source] = s.Target
+		Cfg_Tc[strings.ToUpper(s.Source)] = s.Target
 		//fmt.Printf("%s (%s)\n", s.Source, Cfg_Tc[s.Source])
 	}
 

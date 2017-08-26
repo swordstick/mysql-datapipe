@@ -94,6 +94,14 @@ func NewCanal(cfg *Config) (*Canal, error) {
 
 	c.master.Addr = c.cfg.Addr
 
+	// 建立client监听
+	NewClientListener, err := NewCMDListener(cfg.MonitorIP, cfg.MnotiroClientPort)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	go NewClientListener.CMDAccept(c)
+
 	if err := c.prepareDumper(); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -129,24 +137,41 @@ func (c *Canal) prepareDumper() error {
 		//no mysqldump, use binlog only
 		return nil
 	}
+	/*
+		tables := c.cfg.Dump.Tables
+		tableDB := c.cfg.Dump.TableDB
 
+		if len(tableDB) == 0 {
+			panic("tableDB can not be Empty !!!")
+		} else if len(tableDB) != 0 && len(tables) == 0 {
+			c.dumper.TableDB = tableDB
+		} else {
+			for _, sub := range tables {
+				c.dumper.AddTables(tableDB, sub)
+			}
+		}
+
+		for _, sub := range c.cfg.Dump.IgnoreTables {
+			c.AddDumpIgnoreTables(c.dumper.TableDB, sub)
+		}
+	*/
+	// fordbs
+	dbs := c.cfg.Dump.Databases
 	tables := c.cfg.Dump.Tables
 	tableDB := c.cfg.Dump.TableDB
 
-	if len(tableDB) == 0 {
-		panic("tableDB can not be Empty !!!")
-	} else if len(tableDB) != 0 && len(tables) == 0 {
-		c.dumper.TableDB = tableDB
+	if len(tables) == 0 {
+		c.dumper.AddDatabases(dbs...)
 	} else {
-		for _, sub := range tables {
-			c.dumper.AddTables(tableDB, sub)
+		c.dumper.AddTables(tableDB, tables...)
+	}
+
+	//我认为应当是"."而非"","
+	for _, ignoreTable := range c.cfg.Dump.IgnoreTables {
+		if seps := strings.Split(ignoreTable, "."); len(seps) == 2 {
+			c.dumper.AddIgnoreTables(seps[0], seps[1])
 		}
 	}
-
-	for _, sub := range c.cfg.Dump.IgnoreTables {
-		c.AddDumpIgnoreTables(c.dumper.TableDB, sub)
-	}
-
 	if c.cfg.Dump.DiscardErr {
 		c.dumper.SetErrOut(ioutil.Discard)
 	} else {

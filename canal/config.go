@@ -15,6 +15,9 @@ type DumpConfig struct {
 	// If not set, ignore using mysqldump.
 	ExecutionPath string `toml:"mysqldump"`
 
+	// fordbs
+	Databases []string `toml:"dbs"`
+
 	// Will override Databases, tables is in database table_db
 	Tables  []string `toml:"tables"`
 	TableDB string   `toml:"table_db"`
@@ -31,17 +34,20 @@ type Config struct {
 	User     string `toml:"user"`
 	Password string `toml:"password"`
 
-	ServerID    uint32     `toml:"server_id"`
-	Flavor      string     `toml:"flavor"`
-	DataDir     string     `toml:"data_dir"`
-	Taddr       string     `toml:"taddr"`
-	Tuser       string     `toml:"tuser"`
-	Tpassword   string     `toml:"tpassword"`
-	dumpThreads uint32     `toml:"dumpthreads"`
-	LogFile     string     `toml:"logfile"`
-	LogLevel    string     `toml:"log_level"`
-	LogDir      string     `toml:"log_dir"`
-	Dump        DumpConfig `toml:"dump"`
+	ServerID          uint32     `toml:"server_id"`
+	Flavor            string     `toml:"flavor"`
+	DataDir           string     `toml:"data_dir"`
+	Taddr             string     `toml:"taddr"`
+	Tuser             string     `toml:"tuser"`
+	Tpassword         string     `toml:"tpassword"`
+	dumpThreads       uint32     `toml:"dumpthreads"`
+	LogFile           string     `toml:"logfile"`
+	LogLevel          string     `toml:"log_level"`
+	LogDir            string     `toml:"log_dir"`
+	Dump              DumpConfig `toml:"dump"`
+	AUTH              string     `toml:"auth"`
+	MonitorIP         string     `toml:"monitorip"`
+	MnotiroClientPort string     `toml:"monitorclient"`
 }
 
 func NewConfigWithFile(name string) (*Config, error) {
