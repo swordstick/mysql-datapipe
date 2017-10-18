@@ -80,7 +80,7 @@ func (h *DbSyncHandler) insert(table *schema.Table, row []interface{}) error {
 		if row[k] == nil {
 			values += "NULL,"
 		} else {
-			values += "'" + canal.EscapeStringBackslash(canal.InterfaceToString(row[k])) + "',"
+			values += "'" + canal.EscapeStringBackslash(canal.InterfaceToString(row[k],table.Columns[k].RawType)) + "',"
 		}
 	}
 	if columns == "" || values == "" {
@@ -94,7 +94,7 @@ func (h *DbSyncHandler) insert(table *schema.Table, row []interface{}) error {
 
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
-	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
+	log.Debugf("Exec sql: %s, err: %v", sqlcmd, err)
 	if err != nil {
 		return fmt.Errorf("Exec sql(%s) Failed, err: %v", sqlcmd, err)
 	}
@@ -108,7 +108,7 @@ func (h *DbSyncHandler) delete(table *schema.Table, row []interface{}) error {
 		if row[k] == nil {
 			condition += "`" + table.Columns[k].Name + "`=NULL AND "
 		} else {
-			condition += "`" + table.Columns[k].Name + "`='" + canal.EscapeStringBackslash(canal.InterfaceToString(row[k])) + "' AND "
+			condition += "`" + table.Columns[k].Name + "`='" + canal.EscapeStringBackslash(canal.InterfaceToString(row[k],table.Columns[k].RawType)) + "' AND "
 		}
 	}
 
@@ -121,7 +121,7 @@ func (h *DbSyncHandler) delete(table *schema.Table, row []interface{}) error {
 	sqlcmd := "DELETE FROM `" + table.Schema + "`.`" + h.tableName(table.Schema, table.Name) + "` WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
-	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
+	log.Debugf("Exec sql: %s, err: %v", sqlcmd, err)
 	if err != nil {
 		return fmt.Errorf("Exec sql(%s) Failed, err: %v", sqlcmd, err)
 	}
@@ -136,7 +136,7 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 			condition += "`" + table.Columns[k].Name + "`=NULL AND "
 		} else {
 			condition += "`" + table.Columns[k].Name + "`='" +
-				canal.EscapeStringBackslash(canal.InterfaceToString(before[k])) + "' AND "
+				canal.EscapeStringBackslash(canal.InterfaceToString(before[k],table.Columns[k].RawType)) + "' AND "
 		}
 	}
 
@@ -156,7 +156,7 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 		if after[k] == nil {
 			setValues += "`" + table.Columns[k].Name + "`=NULL,"
 		} else {
-			setValues += "`" + table.Columns[k].Name + "`='" + canal.EscapeStringBackslash(canal.InterfaceToString(after[k])) + "',"
+			setValues += "`" + table.Columns[k].Name + "`='" + canal.EscapeStringBackslash(canal.InterfaceToString(after[k],table.Columns[k].RawType)) + "',"
 		}
 	}
 	setValues = setValues[0 : len(setValues)-1]
@@ -164,7 +164,7 @@ func (h *DbSyncHandler) update(table *schema.Table, before, after []interface{})
 	sqlcmd := "UPDATE `" + table.Schema + "`.`" + h.tableName(table.Schema, table.Name) + "` SET" + setValues + " WHERE " + condition
 	_, err := h.dbase.Exec(sqlcmd)
 	// 关闭打印
-	// log.Infof("Exec sql: %s, err: %v", sqlcmd, err)
+	log.Debugf("Exec sql: %s, err: %v", sqlcmd, err)
 	if err != nil {
 		return fmt.Errorf("Exec sql(%s) Failed, err: %v", sqlcmd, err)
 	}

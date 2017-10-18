@@ -249,7 +249,7 @@ func (c *Canal) travelRowsEventHandler(e *RowsEvent) error {
 }
 
 // []byte, int64, float64, bool, string
-func InterfaceToString(s interface{}) string {
+func InterfaceToString(s interface{},RawType string) string {
 	// Handle the most common destination types using type switches and
 	// fall back to reflection for all other types.
 	switch s := s.(type) {
@@ -262,20 +262,40 @@ func InterfaceToString(s interface{}) string {
 	case bool:
 		return strconv.FormatBool(s)
 	case int:
+		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
+			log.Infof("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
+			return strconv.FormatUint(uint64(uint(s)), 10)
+		}
 		return strconv.FormatInt(int64(s), 10)
 	case int8:
+		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
+			log.Infof("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
+			return strconv.FormatUint(uint64(uint8(s)), 10)
+		}
 		return strconv.FormatInt(int64(s), 10)
 	case uint8:
 		return strconv.FormatUint(uint64(s), 10)
 	case int16:
+		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
+			log.Infof("int16: %v",strconv.FormatUint(uint64(uint16(s)), 10))
+			return strconv.FormatUint(uint64(uint16(s)), 10)
+		}
 		return strconv.FormatInt(int64(s), 10)
 	case uint16:
 		return strconv.FormatUint(uint64(s), 10)
 	case int32:
+		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
+			log.Infof("int32: %v",strconv.FormatUint(uint64(uint32(s)), 10))
+			return strconv.FormatUint(uint64(uint32(s)), 10)
+		}
 		return strconv.FormatInt(int64(s), 10)
 	case uint32:
 		return strconv.FormatUint(uint64(s), 10)
 	case int64:
+		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
+			log.Infof("int64: %v",strconv.FormatUint(uint64(s), 10))
+			return strconv.FormatUint(uint64(s), 10)
+		}
 		return strconv.FormatInt(int64(s), 10)
 	case uint64:
 		return strconv.FormatUint(uint64(s), 10)
