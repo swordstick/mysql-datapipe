@@ -80,7 +80,7 @@ func (dt *Cmdprocess) newCMDprocess(client net.Conn, c *Canal) error {
 			log.Error(err)
 			return nil
 		}
-
+		
 		client.Write([]byte(CtlNewline + time.Now().String()))
 
 		// 检查是否认证或此操作为认证
