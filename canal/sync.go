@@ -21,6 +21,7 @@ var (
 	expCreateTable      = regexp.MustCompile("(?i)^CREATE\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
 	expCreateTableIfnotExist = regexp.MustCompile("(?i)^CREATE\\sTABLE\\sIF\\sNOT\\sEXISTS\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
 	expDropTable        = regexp.MustCompile("(?i)^DROP\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+	expDropTableIfnotExist = regexp.MustCompile("(?i)^DROP\\sTABLE\\sIF\\sEXISTS\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
 	expTruncTable       = regexp.MustCompile("(?i)^TRUNCATE\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}$")
 	expAlterTableRename = regexp.MustCompile("(?i)^ALTER\\sTABLE\\s.*?\\sRENAME\\sTO\\s.*")
 )
@@ -200,7 +201,13 @@ func (c *Canal) startSyncBinlog() error {
 					// 待加入schema字符串
 					repb := []byte("`" + string(e.Schema) + "`.")
 					// 生产加入了schema字符串的内容
-					pp := expDropTable.FindSubmatchIndex(e.Query)
+					//pp := expDropTable.FindSubmatchIndex(e.Query)
+					var pp []int
+					if strings.Index(strings.ToUpper(string(e.Query)),"IF EXISTS") != -1{
+						pp = expDropTableIfnotExist.FindSubmatchIndex(e.Query)
+					} else {
+						pp = expDropTable.FindSubmatchIndex(e.Query)
+					}
 					var newslice [][]byte
 					if string(e.Query[pp[4]-1]) == "`" {
 						newslice = append(newslice, e.Query[0:pp[4]-1])
@@ -215,6 +222,11 @@ func (c *Canal) startSyncBinlog() error {
 					log.Debug(string(newquery))
 					// 更新e.Query
 					e.Query = newquery
+
+					//更新mb[]
+					if strings.Index(strings.ToUpper(string(e.Query)),"IF EXISTS") != -1{
+						mb = expDropTableIfnotExist.FindSubmatch(e.Query)
+					}
 				}
 
 				if err = c.handleQueryEvent(ev, string(mb[1]), strings.TrimSpace(string(mb[2])), DropAction); err != nil {

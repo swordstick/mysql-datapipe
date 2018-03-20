@@ -263,13 +263,13 @@ func InterfaceToString(s interface{},RawType string) string {
 		return strconv.FormatBool(s)
 	case int:
 		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
-			log.Infof("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
+			log.Debugf("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
 			return strconv.FormatUint(uint64(uint(s)), 10)
 		}
 		return strconv.FormatInt(int64(s), 10)
 	case int8:
 		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
-			log.Infof("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
+			log.Debugf("int8: %v",strconv.FormatUint(uint64(uint8(s)), 10))
 			return strconv.FormatUint(uint64(uint8(s)), 10)
 		}
 		return strconv.FormatInt(int64(s), 10)
@@ -277,7 +277,7 @@ func InterfaceToString(s interface{},RawType string) string {
 		return strconv.FormatUint(uint64(s), 10)
 	case int16:
 		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
-			log.Infof("int16: %v",strconv.FormatUint(uint64(uint16(s)), 10))
+			log.Debugf("int16: %v",strconv.FormatUint(uint64(uint16(s)), 10))
 			return strconv.FormatUint(uint64(uint16(s)), 10)
 		}
 		return strconv.FormatInt(int64(s), 10)
@@ -285,7 +285,7 @@ func InterfaceToString(s interface{},RawType string) string {
 		return strconv.FormatUint(uint64(s), 10)
 	case int32:
 		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
-			log.Infof("int32: %v",strconv.FormatUint(uint64(uint32(s)), 10))
+			log.Debugf("int32: %v",strconv.FormatUint(uint64(uint32(s)), 10))
 			return strconv.FormatUint(uint64(uint32(s)), 10)
 		}
 		return strconv.FormatInt(int64(s), 10)
@@ -293,7 +293,7 @@ func InterfaceToString(s interface{},RawType string) string {
 		return strconv.FormatUint(uint64(s), 10)
 	case int64:
 		if strings.Index(strings.ToUpper(RawType),"UNSIGNED") != -1 {
-			log.Infof("int64: %v",strconv.FormatUint(uint64(s), 10))
+			log.Debugf("int64: %v",strconv.FormatUint(uint64(s), 10))
 			return strconv.FormatUint(uint64(s), 10)
 		}
 		return strconv.FormatInt(int64(s), 10)
